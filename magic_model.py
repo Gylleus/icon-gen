@@ -5,13 +5,22 @@ import time
 from IPython import display
 from PIL import Image
 
-data_dir="C:/Users/Karl/Downloads/IconData/backup_data/"
-batch_size = 32
+#data_dir="C:/Users/Karl/Downloads/IconData/Data/Abilities/GW2"
+data_dir="C:/Users/Karl/Downloads/IconData/backup_data"
+batch_size = 16
 img_height = 64
 img_width = 64
-EPOCHS = 1000
+EPOCHS = 5000
 noise_dim = 100
 num_examples_to_generate = 16
+epoch_print_interval = 25
+
+disc_dropout_prob = 0.4
+gen_dropout_prob = 0.4
+ 
+
+generator_learning_rate=1e-5
+discriminator_learning_rate=1e-5
 
 # Create Dataset
 
@@ -25,8 +34,8 @@ train_ds = tf.keras.preprocessing.image_dataset_from_directory(
 classes = train_ds.class_names
 num_classes = len(classes)
 
-AUTOTUNE = tf.data.experimental.AUTOTUNE
-train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
+#AUTOTUNE = tf.data.experimental.AUTOTUNE
+#train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 # Rescale input images
 normalization_layer = tf.keras.layers.experimental.preprocessing.Rescaling(scale=1./127.5, offset=-1)
@@ -35,14 +44,14 @@ train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
 def make_generator_model():
     image_size = img_height
     mid_size = image_size //2
-    start_size = image_size //4
-    dropout_prob = 0.4
+    start_size = image_size //16
     model = tf.keras.Sequential()
-    model.add(layers.Dense(4*4*256, input_shape=(noise_dim,)))
+    model.add(layers.Dense(start_size*start_size*256, input_shape=(noise_dim,)))
     model.add(layers.BatchNormalization(momentum=0.9))
     model.add(layers.Activation('relu'))
-    model.add(layers.Reshape((4, 4, 256)))
-    model.add(layers.Dropout(dropout_prob))
+    model.add(layers.Reshape((start_size, start_size, 256)))
+
+    model.add(layers.Dropout(gen_dropout_prob))
 
 
     model.add(layers.UpSampling2D())
@@ -50,6 +59,7 @@ def make_generator_model():
     model.add(layers.Conv2DTranspose(128, 5, padding='same'))
     model.add(layers.BatchNormalization(momentum=0.9))
     model.add(layers.Activation('relu'))
+    model.add(layers.Dropout(gen_dropout_prob))
 
     model.add(layers.UpSampling2D())
     model.add(layers.Conv2DTranspose(128, 5, padding='same'))
@@ -75,13 +85,20 @@ def make_generator_model():
 def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same',
-                                     input_shape=[64, 64, 3]))
+                                     input_shape=[img_height, img_height, 3]))
     model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+    model.add(layers.Dropout(disc_dropout_prob))
 
     model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
     model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+    model.add(layers.Dropout(disc_dropout_prob))
+
+    model.add(layers.Conv2D(256, (5, 5), strides=(2, 2), padding='same'))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(disc_dropout_prob))
+
+    model.add(layers.Conv2D(512, (5, 5), strides=(2, 2), padding='same'))
+    model.add(layers.LeakyReLU())
 
     model.add(layers.Flatten())
     model.add(layers.Dense(1))
@@ -103,8 +120,8 @@ def discriminator_loss(real_output, fake_output):
 def generator_loss(fake_output):
     return cross_entropy(tf.ones_like(fake_output), fake_output)
 
-generator_optimizer = tf.keras.optimizers.Adam(1e-4)
-discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+generator_optimizer = tf.keras.optimizers.Adam(generator_learning_rate)
+discriminator_optimizer = tf.keras.optimizers.Adam(discriminator_learning_rate)
 
 
 # Notice the use of `tf.function`
@@ -162,7 +179,7 @@ def train(dataset, epochs):
 
     # Produce images for the GIF as we go
     
-    if epoch % 10 == 0:
+    if epoch % epoch_print_interval == 0:
         display.clear_output(wait=True)
         generate_and_save_images(generator,
                              epoch,
