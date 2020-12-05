@@ -29,7 +29,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 # Rescale input images
-normalization_layer = tf.keras.layers.experimental.preprocessing.Rescaling(1./255)
+normalization_layer = tf.keras.layers.experimental.preprocessing.Rescaling(scale=1./127.5, offset=-1)
 train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
 
 def make_generator_model():
@@ -66,7 +66,7 @@ def make_generator_model():
     model.add(layers.Activation('relu'))
     
     model.add(layers.Conv2DTranspose(3, 5,padding='same'))
-    model.add(layers.Activation('sigmoid'))
+    model.add(layers.Activation('tanh'))
     print( model.output_shape)
 
     return model
@@ -85,7 +85,7 @@ def make_discriminator_model():
 
     model.add(layers.Flatten())
     model.add(layers.Dense(1))
-    model.add(layers.Activation('sigmoid'))
+    model.add(layers.Activation('tanh'))
 
 
     return model
@@ -137,7 +137,7 @@ def generate_and_save_images(model, epoch, test_input):
   # Notice `training` is set to False.
   # This is so all layers run in inference mode (batchnorm).
   predictions = model(test_input, training=False)
-
+  predictions = (predictions+1)/2
   fig = plt.figure(figsize=(4,4))
 
   for i in range(predictions.shape[0]):
@@ -148,6 +148,7 @@ def generate_and_save_images(model, epoch, test_input):
   plt.savefig('image_at_epoch_{}.png'.format(epoch))
   #plt.show()
 
+kek_noise = tf.random.normal([num_examples_to_generate, noise_dim])
 def train(dataset, epochs):
   for epoch in range(epochs):
     start = time.time()
@@ -165,8 +166,7 @@ def train(dataset, epochs):
         display.clear_output(wait=True)
         generate_and_save_images(generator,
                              epoch,
-                             tf.random.normal([num_examples_to_generate, noise_dim]
-                             ))
+                             kek_noise)
 
     print ('Time for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
 
@@ -177,4 +177,4 @@ train(train_ds, EPOCHS)
 display.clear_output(wait=True)
 generate_and_save_images(generator,
                         epochs,
-                        tf.random.normal([num_examples_to_generate, noise_dim]))
+                        kek_noise)
