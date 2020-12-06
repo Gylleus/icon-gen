@@ -5,3 +5,4 @@ tensorflow-gpu-estimator==2.3.0
 matplotlib==3.3.3
 ipython==7.19.0
 ipython-genutils==0.2.0
+PyYAML==5.3.1
