@@ -10,17 +10,19 @@ from PIL import Image
 data_dir="C:/Users/Karl/Downloads/IconData/backup_data"
 batch_size = 16
 img_height = 64
-img_width = 64
+img_width = img_height
 EPOCHS = 50000
 noise_dim = 100
 num_examples_to_generate = 16
-epoch_print_interval = 250
+epoch_print_interval = 25
 
 disc_dropout_prob = 0.4
 gen_dropout_prob = 0.4
  
+RGB=False
+num_channels = 3 if RGB else 1
 
-generator_learning_rate=1e-5
+generator_learning_rate=5e-5
 discriminator_learning_rate=1e-5
 
 # Create Dataset
@@ -39,7 +41,7 @@ num_classes = len(classes)
 #train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 # Rescale input images
-train_ds = train_ds.map(tf.image.rgb_to_grayscale(train_ds, name=None))
+train_ds = train_ds.map(lambda x, y: (tf.image.rgb_to_grayscale(x, name=None), y))
 normalization_layer = tf.keras.layers.experimental.preprocessing.Rescaling(scale=1./127.5, offset=-1)
 train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
 
@@ -77,7 +79,7 @@ def make_generator_model():
     model.add(layers.BatchNormalization(momentum=0.9))
     model.add(layers.Activation('relu'))
     
-    model.add(layers.Conv2DTranspose(3, 5,padding='same'))
+    model.add(layers.Conv2DTranspose(num_channels, 5,padding='same'))
     model.add(layers.Activation('tanh'))
     print( model.output_shape)
 
@@ -87,7 +89,7 @@ def make_generator_model():
 def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same',
-                                     input_shape=[img_height, img_height, 3]))
+                                     input_shape=[img_height, img_height, num_channels]))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(disc_dropout_prob))
 
@@ -161,7 +163,7 @@ def generate_and_save_images(model, epoch, test_input):
 
   for i in range(predictions.shape[0]):
       plt.subplot(4, 4, i+1)
-      plt.imshow(predictions[i, :, :, :])
+      plt.imshow(predictions[i, :, :, :], cmap=None if RGB else 'gray')
       plt.axis('off')
 
   plt.savefig('image_at_epoch_{}.png'.format(epoch))
