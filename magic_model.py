@@ -2,6 +2,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow.keras import layers
 import time
+import os
 from IPython import display
 from PIL import Image
 
@@ -10,10 +11,10 @@ data_dir="C:/Users/Karl/Downloads/IconData/backup_data"
 batch_size = 16
 img_height = 64
 img_width = 64
-EPOCHS = 5000
+EPOCHS = 50000
 noise_dim = 100
 num_examples_to_generate = 16
-epoch_print_interval = 25
+epoch_print_interval = 250
 
 disc_dropout_prob = 0.4
 gen_dropout_prob = 0.4
@@ -38,6 +39,7 @@ num_classes = len(classes)
 #train_ds = train_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 # Rescale input images
+train_ds = train_ds.map(tf.image.rgb_to_grayscale(train_ds, name=None))
 normalization_layer = tf.keras.layers.experimental.preprocessing.Rescaling(scale=1./127.5, offset=-1)
 train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
 
@@ -166,21 +168,23 @@ def generate_and_save_images(model, epoch, test_input):
   #plt.show()
 
 kek_noise = tf.random.normal([num_examples_to_generate, noise_dim])
+checkpoint_dir = './training_checkpoints'
+checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
+                                 discriminator_optimizer=discriminator_optimizer,
+                                 generator=generator,
+                                 discriminator=discriminator)
 def train(dataset, epochs):
   for epoch in range(epochs):
     start = time.time()
     for image_batch in dataset:
-        # TODO: FIX THIS LATER!!
-        # TODO: FIX THIS LATER!!
-        # TODO: FIX THIS LATER!!
-        # TODO: FIX THIS LATER!!
         train_step(image_batch[0])
-       # generate_and_save_images(generator,f"kek_{i}",seed)
 
     # Produce images for the GIF as we go
     
     if epoch % epoch_print_interval == 0:
         display.clear_output(wait=True)
+        checkpoint.save(file_prefix = f"{checkpoint_prefix}_{epoch}")
         generate_and_save_images(generator,
                              epoch,
                              kek_noise)
@@ -189,8 +193,8 @@ def train(dataset, epochs):
 
     # Generate after the final epoch
 
-
 train(train_ds, EPOCHS)
+generator.save('saved_model')
 display.clear_output(wait=True)
 generate_and_save_images(generator,
                         epochs,
