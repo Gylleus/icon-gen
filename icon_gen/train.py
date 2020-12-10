@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import yaml
 import click
 import tensorflow as tf
+import tensorflowjs as tfjs
 from IPython import display
 
 
@@ -22,7 +23,7 @@ class Trainer:
         self.noise_dim = noise_dim
         self.rgb = rgb
         self.image_dir = "./train_images"
-        os.makedirs(self.image_dir)
+        os.makedirs(self.image_dir, exist_ok=True)
         self.static_noise = tf.random.normal([16, noise_dim])
         self.checkpoint_prefix = os.path.join("./training_checkpoints", "ckpt")
         self.checkpoint = tf.train.Checkpoint(
@@ -142,6 +143,7 @@ def main(config: str):
     trainer = Trainer(gen, disc, noise_dim=parameters['generator']['noise_dim'], rgb=parameters["rgb"])
     trainer.train(dataset=train_data, epochs=config['train']['epochs'], save_interval=config['train']['save_interval'])
     gen.save("saved_model")
+    tfjs.converters.save_keras_model(gen, "saved_js_model")
 
 
 if __name__ == "__main__":
