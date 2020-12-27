@@ -4,14 +4,14 @@ parameters:
   generator:
     noise_dim: 100
     dropout_prob: 0.4
-    learning_rate: "5e-5"
+    learning_rate: "7e-6"
     batch_norm_momentum: 0.9
   discriminator:
     dropout_prob: 0.4
-    learning_rate: "1e-5"
-  rgb: false
+    learning_rate: "6e-6"
+  rgb: true
 train:
-  epochs: 50
-  save_interval: 25
+  epochs: 3500
+  save_interval: 50
 data:
-  directory: "C:/Users/Karl/Downloads/IconData/backup_data"
+  directory: "C:/Users/Karl/Downloads/IconData/backup_data/Abilities"
