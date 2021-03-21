@@ -14,4 +14,4 @@ train:
   epochs: 3500
   save_interval: 50
 data:
-  directory: "C:/Users/Karl/Downloads/IconData/backup_data/Abilities"
+  directory: "./out"
